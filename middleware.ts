@@ -1,7 +1,7 @@
-import { auth } from '@/auth'
+import { authMiddleware } from '@/auth.edge'
 import { NextResponse } from 'next/server'
 
-export default auth((req) => {
+export default authMiddleware((req) => {
     const { pathname } = req.nextUrl
     const isLoggedIn = !!req.auth
 
