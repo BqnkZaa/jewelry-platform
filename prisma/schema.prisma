@@ -1,0 +1,134 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  ADMIN
+  OFFICE
+  WORKER
+}
+
+enum JobStatus {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+enum ProductionStep {
+  WAX
+  CLEAN_WAX
+  CASTING
+  FILING
+  MEDIA
+  SET_STONE
+  POLISHING
+  PLATING
+  FQC
+  PACKING
+  FINISHED
+}
+
+model User {
+  id             String          @id @default(cuid())
+  email          String?         @unique
+  username       String?         @unique
+  password       String
+  fullName       String?         @map("full_name")
+  role           UserRole        @default(WORKER)
+  department     ProductionStep?
+  avatarUrl      String?         @map("avatar_url")
+  createdAt      DateTime        @default(now()) @map("created_at")
+  updatedAt      DateTime        @updatedAt @map("updated_at")
+
+  jobOrders      JobOrder[]      @relation("CreatedBy")
+  productionLogs ProductionLog[]
+
+  @@map("users")
+}
+
+model Product {
+  id            String           @id @default(cuid())
+  skuCode       String           @unique @map("sku_code")
+  name          String
+  nameTh        String?          @map("name_th")
+  description   String?
+  imageUrl      String?          @map("image_url")
+  weightGrams   Decimal?         @map("weight_grams") @db.Decimal(10, 2)
+  priceFinished Decimal?         @map("price_finished") @db.Decimal(12, 2)
+  steps         ProductionStep[] @default([WAX, CLEAN_WAX, CASTING, FILING, MEDIA, SET_STONE, POLISHING, PLATING, FQC, PACKING])
+  isActive      Boolean          @default(true) @map("is_active")
+  createdAt     DateTime         @default(now()) @map("created_at")
+  updatedAt     DateTime         @updatedAt @map("updated_at")
+
+  jobOrderItems JobOrderItem[]
+
+  @@map("products")
+}
+
+model JobOrder {
+  id           String    @id @default(cuid())
+  jobNo        String    @unique @map("job_no")
+  customerName String    @map("customer_name")
+  customerPo   String?   @map("customer_po")
+  dueDate      DateTime  @map("due_date") @db.Date
+  status       JobStatus @default(PENDING)
+  notes        String?
+  createdById  String?   @map("created_by")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+
+  createdBy User?          @relation("CreatedBy", fields: [createdById], references: [id])
+  items     JobOrderItem[]
+
+  @@map("job_orders")
+}
+
+model JobOrderItem {
+  id          String         @id @default(cuid())
+  jobOrderId  String         @map("job_order_id")
+  productId   String         @map("product_id")
+  qty         Int
+  currentStep ProductionStep @default(WAX) @map("current_step")
+  createdAt   DateTime       @default(now()) @map("created_at")
+
+  jobOrder       JobOrder        @relation(fields: [jobOrderId], references: [id], onDelete: Cascade)
+  product        Product         @relation(fields: [productId], references: [id])
+  productionLogs ProductionLog[]
+
+  @@unique([jobOrderId, productId])
+  @@map("job_order_items")
+}
+
+model ProductionLog {
+  id             String         @id @default(cuid())
+  jobOrderItemId String         @map("job_order_item_id")
+  stepName       ProductionStep @map("step_name")
+  workerId       String         @map("worker_id")
+  goodQty        Int            @default(0) @map("good_qty")
+  scrapQty       Int            @default(0) @map("scrap_qty")
+  reworkQty      Int            @default(0) @map("rework_qty")
+  weight         Decimal?       @db.Decimal(10, 2) // Weight in grams
+  notes          String?
+  createdAt      DateTime       @default(now()) @map("created_at")
+
+  jobOrderItem JobOrderItem @relation(fields: [jobOrderItemId], references: [id], onDelete: Cascade)
+  worker       User         @relation(fields: [workerId], references: [id])
+
+  @@map("production_logs")
+}
+
+model JobNoSequence {
+  yearMonth    String @id @map("year_month")
+  lastSequence Int    @default(0) @map("last_sequence")
+
+  @@map("job_no_sequence")
+}
