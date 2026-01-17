@@ -63,6 +63,7 @@ export async function getWorkQueue(step?: ProductionStep) {
                                 id: true,
                                 jobNo: true,
                                 customerName: true,
+                                customerPo: true,
                                 dueDate: true,
                                 status: true,
                             },
@@ -94,11 +95,68 @@ export async function getWorkQueue(step?: ProductionStep) {
             (item) => item.jobOrder.status === 'PENDING' || item.jobOrder.status === 'IN_PROGRESS'
         )
 
-        // Filter items that have balance > 0 at this step
+        // Bulk fetch logs for balance calculation
+        const itemIds = activeItems.map(item => item.id)
+
+        // 1. Get initial quantities (for first step calculation)
+        // (We already have this from activeItems.qty)
+
+        // 2. Get production logs for ALL relevant items in ONE query
+        const allLogs = await prisma.productionLog.findMany({
+            where: {
+                jobOrderItemId: { in: itemIds }
+            },
+            select: {
+                jobOrderItemId: true,
+                stepName: true,
+                goodQty: true,
+                scrapQty: true,
+                reworkQty: true,
+                reworkToStep: true
+            }
+        })
+
+        // Helper to calculate balance in-memory
+        const calculateBalance = (itemId: string, targetStep: ProductionStep) => {
+            const stepInfo = PRODUCTION_STEPS.find((s) => s.key === targetStep)
+            const stepOrder = stepInfo?.order || 1
+            const itemLogs = allLogs.filter(log => log.jobOrderItemId === itemId)
+            const item = activeItems.find(i => i.id === itemId)
+
+            let totalFromPrev = 0
+
+            if (stepOrder === 1) {
+                // First step: get from job item qty
+                totalFromPrev = item?.qty || 0
+            } else {
+                // Other steps: sum good qty from previous step
+                const prevStepKey = PRODUCTION_STEPS.find((s) => s.order === stepOrder - 1)?.key
+                if (prevStepKey) {
+                    const prevStepLogs = itemLogs.filter(log => log.stepName === prevStepKey)
+                    totalFromPrev = prevStepLogs.reduce((sum, log) => sum + log.goodQty, 0)
+                }
+            }
+
+            // Add rework coming INTO this step
+            const reworkIncomingLogs = itemLogs.filter(log => log.reworkToStep === targetStep)
+            const totalReworkIncoming = reworkIncomingLogs.reduce((sum, log) => sum + log.reworkQty, 0)
+
+            totalFromPrev += totalReworkIncoming
+
+            // Subtract processed in THIS step
+            const currentStepLogs = itemLogs.filter(log => log.stepName === targetStep)
+            const totalProcessed = currentStepLogs.reduce((sum, log) =>
+                sum + log.goodQty + log.scrapQty + log.reworkQty, 0
+            )
+
+            return Math.max(0, totalFromPrev - totalProcessed)
+        }
+
         const itemsWithBalance = []
         for (const item of activeItems) {
+            let balance = item.qty
             if (step) {
-                const balance = await getStepBalance(item.id, step)
+                balance = calculateBalance(item.id, step)
                 if (balance > 0) {
                     itemsWithBalance.push({ item, balance })
                 }
@@ -127,6 +185,7 @@ export async function getWorkQueue(step?: ProductionStep) {
     }
 }
 
+// Keep single item function for other usages (like recordProduction validation)
 export async function getStepBalance(jobItemId: string, step: ProductionStep): Promise<number> {
     const stepInfo = PRODUCTION_STEPS.find((s) => s.key === step)
     const stepOrder = stepInfo?.order || 1

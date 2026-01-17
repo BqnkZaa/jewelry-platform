@@ -133,7 +133,6 @@ export function Sidebar({ userRole = 'ADMIN', userName = 'ผู้ใช้ง�
                                 alt="JC Logo"
                                 fill
                                 className="object-contain"
-                                unoptimized
                             />
                         </div>
                     )}
