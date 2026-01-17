@@ -113,7 +113,7 @@ export function Sidebar({ userRole = 'ADMIN', userName = 'ผู้ใช้ง�
                         <div className="flex items-center gap-3">
                             <div className="w-12 h-12 relative">
                                 <Image
-                                    src="/picture/jewelry_logo.PNG"
+                                    src="/picture/jewelry_logo.png"
                                     alt="JC Logo"
                                     fill
                                     className="object-contain"
@@ -129,7 +129,7 @@ export function Sidebar({ userRole = 'ADMIN', userName = 'ผู้ใช้ง�
                     {isCollapsed && (
                         <div className="w-10 h-10 relative mx-auto">
                             <Image
-                                src="/picture/jewelry_logo.PNG"
+                                src="/picture/jewelry_logo.png"
                                 alt="JC Logo"
                                 fill
                                 className="object-contain"
