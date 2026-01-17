@@ -64,6 +64,7 @@ export default function ProductionPage() {
         goodQty: 0,
         scrapQty: 0,
         reworkQty: 0,
+        reworkToStep: undefined as ProductionStep | undefined,
         weight: undefined as number | undefined,
         notes: '',
     })
@@ -90,7 +91,7 @@ export default function ProductionPage() {
 
     const openRecordModal = async (item: WorkItem) => {
         setSelectedItem(item)
-        setFormData({ goodQty: 0, scrapQty: 0, reworkQty: 0, weight: undefined, notes: '' })
+        setFormData({ goodQty: 0, scrapQty: 0, reworkQty: 0, reworkToStep: undefined, weight: undefined, notes: '' })
         setError('')
 
         // Get available quantity
@@ -116,6 +117,12 @@ export default function ProductionPage() {
             return
         }
 
+        // Validate reworkToStep if reworkQty > 0
+        if (formData.reworkQty > 0 && !formData.reworkToStep) {
+            setError('กรุณาเลือก step ที่จะส่ง rework กลับไป')
+            return
+        }
+
         setIsSubmitting(true)
 
         try {
@@ -126,6 +133,7 @@ export default function ProductionPage() {
                     goodQty: formData.goodQty,
                     scrapQty: formData.scrapQty,
                     reworkQty: formData.reworkQty,
+                    reworkToStep: formData.reworkToStep,
                     weight: formData.weight,
                     notes: formData.notes || undefined,
                 },
@@ -166,12 +174,12 @@ export default function ProductionPage() {
                     </span>
                 </div>
             ) : (
-                <div className="flex flex-wrap gap-2">
+                <div className="flex flex-wrap gap-1.5 sm:gap-2">
                     {PRODUCTION_STEPS.filter(step => step.key !== 'FINISHED').map((step) => (
                         <button
                             key={step.key}
                             onClick={() => setSelectedStep(step.key)}
-                            className={`px-4 py-2 rounded-xl text-sm font-medium transition-all ${selectedStep === step.key
+                            className={`px-2.5 sm:px-4 py-1.5 sm:py-2 rounded-xl text-xs sm:text-sm font-medium transition-all ${selectedStep === step.key
                                 ? `${getStepColor(step.key)} text-white shadow-lg`
                                 : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700 border border-gray-200 dark:border-gray-700'
                                 }`}
@@ -201,38 +209,38 @@ export default function ProductionPage() {
                             icon={<Settings className="w-12 h-12 text-gray-300" />}
                         />
                     ) : (
-                        <Table>
+                        <Table className="mobile-card-table">
                             <TableHeader>
                                 <TableRow>
                                     <TableHead>เลขที่ใบสั่ง</TableHead>
-                                    <TableHead>ลูกค้า</TableHead>
+                                    <TableHead className="hide-on-mobile">ลูกค้า</TableHead>
                                     <TableHead>SKU</TableHead>
-                                    <TableHead>ชื่อสินค้า</TableHead>
+                                    <TableHead className="hide-on-mobile">ชื่อสินค้า</TableHead>
                                     <TableHead>จำนวนรับ</TableHead>
-                                    <TableHead>น้ำหนักรับ (g.)</TableHead>
-                                    <TableHead>กำหนดส่ง</TableHead>
+                                    <TableHead className="hide-on-mobile">น้ำหนักรับ (g.)</TableHead>
+                                    <TableHead className="hide-on-mobile">กำหนดส่ง</TableHead>
                                     <TableHead className="w-24">บันทึก</TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
                                 {workItems.map((item) => (
                                     <TableRow key={item.id}>
-                                        <TableCell className="font-medium">{item.jobOrder.jobNo}</TableCell>
-                                        <TableCell>{item.jobOrder.customerName}</TableCell>
-                                        <TableCell>{item.product.skuCode}</TableCell>
-                                        <TableCell>{item.product.nameTh || item.product.name}</TableCell>
-                                        <TableCell>
+                                        <TableCell data-label="เลขที่" className="font-medium">{item.jobOrder.jobNo}</TableCell>
+                                        <TableCell data-label="ลูกค้า" className="hide-on-mobile">{item.jobOrder.customerName}</TableCell>
+                                        <TableCell data-label="SKU">{item.product.skuCode}</TableCell>
+                                        <TableCell data-label="ชื่อ" className="hide-on-mobile">{item.product.nameTh || item.product.name}</TableCell>
+                                        <TableCell data-label="จำนวน">
                                             {item.lastGoodQty ?? item.qty}
                                         </TableCell>
-                                        <TableCell>
+                                        <TableCell data-label="น้ำหนัก" className="hide-on-mobile">
                                             {item.lastWeight ? (
                                                 <span className="text-indigo-600 font-medium">{item.lastWeight.toFixed(2)} g</span>
                                             ) : (
                                                 <span className="text-gray-400">-</span>
                                             )}
                                         </TableCell>
-                                        <TableCell>{formatDate(item.jobOrder.dueDate)}</TableCell>
-                                        <TableCell>
+                                        <TableCell data-label="กำหนด" className="hide-on-mobile">{formatDate(item.jobOrder.dueDate)}</TableCell>
+                                        <TableCell data-label="">
                                             <Button
                                                 size="sm"
                                                 onClick={() => openRecordModal(item)}
@@ -263,26 +271,26 @@ export default function ProductionPage() {
                             <div className="p-4 rounded-xl bg-gray-50 dark:bg-gray-800">
                                 <div className="grid grid-cols-2 gap-4 text-sm">
                                     <div>
-                                        <p className="text-gray-500">ใบสั่งผลิต</p>
-                                        <p className="font-medium">{selectedItem.jobOrder.jobNo}</p>
+                                        <p className="text-gray-500 dark:text-gray-400">ใบสั่งผลิต</p>
+                                        <p className="font-medium text-gray-900 dark:text-white">{selectedItem.jobOrder.jobNo}</p>
                                     </div>
                                     <div>
-                                        <p className="text-gray-500">สินค้า</p>
-                                        <p className="font-medium">{selectedItem.product.skuCode}</p>
+                                        <p className="text-gray-500 dark:text-gray-400">สินค้า</p>
+                                        <p className="font-medium text-gray-900 dark:text-white">{selectedItem.product.skuCode}</p>
                                     </div>
                                     <div>
-                                        <p className="text-gray-500">จำนวนทั้งหมด</p>
-                                        <p className="font-medium">{selectedItem.qty} ชิ้น</p>
+                                        <p className="text-gray-500 dark:text-gray-400">จำนวนทั้งหมด</p>
+                                        <p className="font-medium text-gray-900 dark:text-white">{selectedItem.qty} ชิ้น</p>
                                     </div>
                                     <div>
-                                        <p className="text-gray-500">จำนวนที่ทำได้</p>
-                                        <p className="font-bold text-indigo-600">{availableQty} ชิ้น</p>
+                                        <p className="text-gray-500 dark:text-gray-400">จำนวนที่ทำได้</p>
+                                        <p className="font-bold text-emerald-600 dark:text-emerald-400">{availableQty} ชิ้น</p>
                                     </div>
                                 </div>
                             </div>
 
                             {/* Quantity Inputs */}
-                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                            <div className="grid grid-cols-2 gap-3 sm:gap-4">
                                 <Input
                                     label="ดี (ชิ้น)"
                                     type="number"
@@ -324,6 +332,30 @@ export default function ProductionPage() {
                             <div className="text-sm text-gray-500 text-center">
                                 รวม: {formData.goodQty + formData.scrapQty + formData.reworkQty} / {availableQty} ชิ้น
                             </div>
+
+                            {/* Rework Step Selector - shown only when reworkQty > 0 */}
+                            {formData.reworkQty > 0 && (
+                                <div className="p-4 rounded-xl bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800">
+                                    <Select
+                                        label="ส่ง Rework กลับไปที่"
+                                        value={formData.reworkToStep || ''}
+                                        onChange={(e) => setFormData({ ...formData, reworkToStep: e.target.value as ProductionStep || undefined })}
+                                        placeholder="-- เลือก step --"
+                                        options={PRODUCTION_STEPS
+                                            .filter(s => {
+                                                const currentOrder = PRODUCTION_STEPS.find(st => st.key === selectedStep)?.order || 0
+                                                return s.order < currentOrder
+                                            })
+                                            .map((step) => ({
+                                                value: step.key,
+                                                label: step.labelTh
+                                            }))}
+                                    />
+                                    <p className="text-xs text-amber-600 dark:text-amber-400 mt-2">
+                                        งาน {formData.reworkQty} ชิ้น จะถูกส่งกลับไปทำใหม่ที่ step ที่เลือก
+                                    </p>
+                                </div>
+                            )}
 
                             <Textarea
                                 label="หมายเหตุ"

@@ -59,17 +59,17 @@ export default function UsersPage() {
                 <CardHeader><CardTitle>รายการผู้ใช้ ({users.length})</CardTitle></CardHeader>
                 <CardContent className="p-0">
                     {isLoading ? <div className="flex justify-center py-12"><div className="w-8 h-8 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin" /></div> : users.length === 0 ? <TableEmpty message="ยังไม่มีผู้ใช้" icon={<Users className="w-12 h-12 text-gray-300" />} /> : (
-                        <Table>
-                            <TableHeader><TableRow><TableHead>ชื่อ</TableHead><TableHead>อีเมล</TableHead><TableHead>ชื่อผู้ใช้</TableHead><TableHead>บทบาท</TableHead><TableHead>แผนก</TableHead><TableHead className="w-24">จัดการ</TableHead></TableRow></TableHeader>
+                        <Table className="mobile-card-table">
+                            <TableHeader><TableRow><TableHead>ชื่อ</TableHead><TableHead className="hide-on-mobile">อีเมล</TableHead><TableHead className="hide-on-mobile">ชื่อผู้ใช้</TableHead><TableHead>บทบาท</TableHead><TableHead className="hide-on-mobile">แผนก</TableHead><TableHead className="w-24">จัดการ</TableHead></TableRow></TableHeader>
                             <TableBody>
                                 {users.map((u) => (
                                     <TableRow key={u.id}>
-                                        <TableCell className="font-medium">{u.fullName || '-'}</TableCell>
-                                        <TableCell>{u.email || '-'}</TableCell>
-                                        <TableCell>{u.username || '-'}</TableCell>
-                                        <TableCell><span className="px-2 py-1 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800">{getRoleLabel(u.role)}</span></TableCell>
-                                        <TableCell>{u.department ? getStepLabel(u.department) : '-'}</TableCell>
-                                        <TableCell><div className="flex gap-1"><button onClick={() => openEditModal(u)} className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-600"><Pencil className="w-4 h-4" /></button><button onClick={() => handleDelete(u.id)} className="p-1.5 rounded-lg hover:bg-rose-50 text-rose-600"><Trash2 className="w-4 h-4" /></button></div></TableCell>
+                                        <TableCell data-label="ชื่อ" className="font-medium">{u.fullName || '-'}</TableCell>
+                                        <TableCell data-label="อีเมล" className="hide-on-mobile">{u.email || '-'}</TableCell>
+                                        <TableCell data-label="ชื่อผู้ใช้" className="hide-on-mobile">{u.username || '-'}</TableCell>
+                                        <TableCell data-label="บทบาท"><span className="px-2 py-1 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800">{getRoleLabel(u.role)}</span></TableCell>
+                                        <TableCell data-label="แผนก" className="hide-on-mobile">{u.department ? getStepLabel(u.department) : '-'}</TableCell>
+                                        <TableCell data-label="จัดการ"><div className="flex gap-1"><button onClick={() => openEditModal(u)} className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-600"><Pencil className="w-4 h-4" /></button><button onClick={() => handleDelete(u.id)} className="p-1.5 rounded-lg hover:bg-rose-50 text-rose-600"><Trash2 className="w-4 h-4" /></button></div></TableCell>
                                     </TableRow>
                                 ))}
                             </TableBody>
@@ -81,7 +81,7 @@ export default function UsersPage() {
                 <form onSubmit={handleSubmit}>
                     <div className="space-y-4">
                         <Input label="ชื่อ-นามสกุล" value={formData.fullName} onChange={(e) => setFormData({ ...formData, fullName: e.target.value })} />
-                        <div className="grid grid-cols-2 gap-4">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             <Input label="อีเมล" type="email" value={formData.email} onChange={(e) => setFormData({ ...formData, email: e.target.value })} />
                             <Input label="ชื่อผู้ใช้" value={formData.username} onChange={(e) => setFormData({ ...formData, username: e.target.value })} />
                         </div>

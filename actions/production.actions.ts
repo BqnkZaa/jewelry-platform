@@ -2,13 +2,14 @@
 
 import prisma from '@/lib/prisma'
 import { revalidatePath } from 'next/cache'
-import { subDays } from 'date-fns'
+import { subDays, format, startOfDay } from 'date-fns'
 import { PRODUCTION_STEPS, type ProductionStep, type ProductionFormData } from '@/lib/types'
 import { serializeProduct } from '@/lib/utils'
 
 export async function getWorkQueue(step?: ProductionStep) {
     try {
-        const items = await prisma.jobOrderItem.findMany({
+        // Get items at the current step
+        const itemsAtStep = await prisma.jobOrderItem.findMany({
             where: step ? { currentStep: step } : undefined,
             include: {
                 product: true,
@@ -38,12 +39,75 @@ export async function getWorkQueue(step?: ProductionStep) {
             },
         })
 
+        // Also find items that have pending rework at this step
+        let itemsWithRework: typeof itemsAtStep = []
+        if (step) {
+            // Find distinct job order items that have rework pointing to this step
+            const reworkLogs = await prisma.productionLog.findMany({
+                where: { reworkToStep: step },
+                select: { jobOrderItemId: true },
+                distinct: ['jobOrderItemId'],
+            })
+
+            const reworkItemIds = reworkLogs.map(log => log.jobOrderItemId)
+            const existingIds = new Set(itemsAtStep.map(item => item.id))
+            const newReworkIds = reworkItemIds.filter(id => !existingIds.has(id))
+
+            if (newReworkIds.length > 0) {
+                itemsWithRework = await prisma.jobOrderItem.findMany({
+                    where: { id: { in: newReworkIds } },
+                    include: {
+                        product: true,
+                        jobOrder: {
+                            select: {
+                                id: true,
+                                jobNo: true,
+                                customerName: true,
+                                dueDate: true,
+                                status: true,
+                            },
+                        },
+                        productionLogs: {
+                            orderBy: { createdAt: 'desc' },
+                            take: 1,
+                            select: {
+                                stepName: true,
+                                weight: true,
+                                goodQty: true,
+                            }
+                        }
+                    },
+                    orderBy: {
+                        jobOrder: {
+                            dueDate: 'asc',
+                        },
+                    },
+                })
+            }
+        }
+
+        // Merge items
+        const allItems = [...itemsAtStep, ...itemsWithRework]
+
         // Filter only active job orders (PENDING or IN_PROGRESS)
-        const activeItems = items.filter(
+        const activeItems = allItems.filter(
             (item) => item.jobOrder.status === 'PENDING' || item.jobOrder.status === 'IN_PROGRESS'
         )
 
-        const serializedItems = activeItems.map(item => {
+        // Filter items that have balance > 0 at this step
+        const itemsWithBalance = []
+        for (const item of activeItems) {
+            if (step) {
+                const balance = await getStepBalance(item.id, step)
+                if (balance > 0) {
+                    itemsWithBalance.push({ item, balance })
+                }
+            } else {
+                itemsWithBalance.push({ item, balance: item.qty })
+            }
+        }
+
+        const serializedItems = itemsWithBalance.map(({ item, balance }) => {
             const lastLog = item.productionLogs[0]
             // eslint-disable-next-line @typescript-eslint/no-unused-vars
             const { productionLogs, ...itemWithoutLogs } = item
@@ -52,7 +116,7 @@ export async function getWorkQueue(step?: ProductionStep) {
                 product: serializeProduct(item.product),
                 lastWeight: lastLog?.weight ? Number(lastLog.weight) : null,
                 lastStep: lastLog?.stepName || null,
-                lastGoodQty: lastLog?.goodQty || null,
+                lastGoodQty: balance, // Use calculated balance instead of lastGoodQty
             }
         })
 
@@ -89,6 +153,16 @@ export async function getStepBalance(jobItemId: string, step: ProductionStep): P
         }
     }
 
+    // Add rework items that were sent to this step
+    const reworkIncoming = await prisma.productionLog.aggregate({
+        where: {
+            jobOrderItemId: jobItemId,
+            reworkToStep: step  // นับ rework ที่ส่งมาที่ step นี้
+        },
+        _sum: { reworkQty: true },
+    })
+    totalFromPrev += (reworkIncoming._sum.reworkQty || 0)
+
     // Subtract already processed in this step
     const processed = await prisma.productionLog.aggregate({
         where: { jobOrderItemId: jobItemId, stepName: step },
@@ -112,6 +186,18 @@ export async function recordProduction(data: ProductionFormData, workerId: strin
             return { success: false, error: `จำนวนเกินกว่าที่มีอยู่ (เหลือ ${balance} ชิ้น)` }
         }
 
+        // Validate reworkToStep if reworkQty > 0
+        if (data.reworkQty > 0) {
+            if (!data.reworkToStep) {
+                return { success: false, error: 'กรุณาเลือก step ที่จะส่ง rework กลับไป' }
+            }
+            const currentStepOrder = PRODUCTION_STEPS.find(s => s.key === data.stepName)?.order || 0
+            const reworkStepOrder = PRODUCTION_STEPS.find(s => s.key === data.reworkToStep)?.order || 0
+            if (reworkStepOrder >= currentStepOrder) {
+                return { success: false, error: 'Rework ต้องส่งกลับไป step ก่อนหน้าเท่านั้น' }
+            }
+        }
+
         // Create production log
         const log = await prisma.productionLog.create({
             data: {
@@ -121,6 +207,7 @@ export async function recordProduction(data: ProductionFormData, workerId: strin
                 goodQty: data.goodQty,
                 scrapQty: data.scrapQty,
                 reworkQty: data.reworkQty,
+                reworkToStep: data.reworkQty > 0 ? data.reworkToStep : null,
                 weight: data.weight,
                 notes: data.notes,
             },
@@ -260,8 +347,18 @@ export async function getProductionLogs(options?: {
 export async function getDashboardStats() {
     try {
         const thirtyDaysAgo = subDays(new Date(), 30)
+        const sevenDaysAgo = subDays(new Date(), 7)
+        const todayStart = startOfDay(new Date())
 
-        const [activeOrders, goodOutput, scrapOutput, stepCounts] = await Promise.all([
+        const [
+            activeOrders,
+            goodOutput,
+            scrapOutput,
+            stepCounts,
+            totalItemsInProduction,
+            finishedItemsToday,
+            dailyProduction
+        ] = await Promise.all([
             prisma.jobOrder.count({
                 where: { status: { in: ['PENDING', 'IN_PROGRESS'] } },
             }),
@@ -282,7 +379,48 @@ export async function getDashboardStats() {
                     },
                 },
             }),
+            // Total qty of items in active job orders
+            prisma.jobOrderItem.aggregate({
+                where: {
+                    jobOrder: {
+                        status: { in: ['PENDING', 'IN_PROGRESS'] },
+                    },
+                },
+                _sum: { qty: true },
+            }),
+            // Items finished today (PACKING step completed today)
+            prisma.productionLog.aggregate({
+                where: {
+                    stepName: 'PACKING',
+                    createdAt: { gte: todayStart },
+                },
+                _sum: { goodQty: true },
+            }),
+            // Daily production for last 7 days
+            prisma.productionLog.findMany({
+                where: {
+                    stepName: 'PACKING',
+                    createdAt: { gte: sevenDaysAgo },
+                },
+                select: {
+                    createdAt: true,
+                    goodQty: true,
+                },
+            }),
         ])
+
+        // Calculate finished items from PACKING logs for active orders
+        const packingLogsForActive = await prisma.productionLog.aggregate({
+            where: {
+                stepName: 'PACKING',
+                jobOrderItem: {
+                    jobOrder: {
+                        status: { in: ['PENDING', 'IN_PROGRESS'] },
+                    },
+                },
+            },
+            _sum: { goodQty: true },
+        })
 
         const totalGood = goodOutput._sum.goodQty || 0
         const totalScrap = scrapOutput._sum.scrapQty || 0
@@ -290,6 +428,29 @@ export async function getDashboardStats() {
             totalGood + totalScrap > 0
                 ? Number(((totalScrap / (totalGood + totalScrap)) * 100).toFixed(2))
                 : 0
+
+        // Process daily production data
+        const dailyProductionMap = new Map<string, number>()
+        for (let i = 6; i >= 0; i--) {
+            const date = format(subDays(new Date(), i), 'yyyy-MM-dd')
+            dailyProductionMap.set(date, 0)
+        }
+        dailyProduction.forEach((log) => {
+            const date = format(log.createdAt, 'yyyy-MM-dd')
+            if (dailyProductionMap.has(date)) {
+                dailyProductionMap.set(date, (dailyProductionMap.get(date) || 0) + log.goodQty)
+            }
+        })
+        const dailyProductionData = Array.from(dailyProductionMap.entries()).map(([date, qty]) => ({
+            date,
+            label: format(new Date(date), 'dd/MM'),
+            qty,
+        }))
+
+        // Calculate totals
+        const totalItemsQty = totalItemsInProduction._sum.qty || 0
+        const finishedInActiveOrders = packingLogsForActive._sum.goodQty || 0
+        const remainingToComplete = Math.max(0, totalItemsQty - finishedInActiveOrders)
 
         return {
             success: true,
@@ -302,6 +463,12 @@ export async function getDashboardStats() {
                     step: s.currentStep as ProductionStep,
                     count: s._count,
                 })),
+                // New stats
+                totalItemsInProduction: totalItemsQty,
+                finishedInActiveOrders,
+                remainingToComplete,
+                finishedToday: finishedItemsToday._sum.goodQty || 0,
+                dailyProductionData,
             },
         }
     } catch (error) {

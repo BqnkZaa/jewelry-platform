@@ -109,16 +109,17 @@ model JobOrderItem {
 }
 
 model ProductionLog {
-  id             String         @id @default(cuid())
-  jobOrderItemId String         @map("job_order_item_id")
-  stepName       ProductionStep @map("step_name")
-  workerId       String         @map("worker_id")
-  goodQty        Int            @default(0) @map("good_qty")
-  scrapQty       Int            @default(0) @map("scrap_qty")
-  reworkQty      Int            @default(0) @map("rework_qty")
-  weight         Decimal?       @db.Decimal(10, 2) // Weight in grams
+  id             String          @id @default(cuid())
+  jobOrderItemId String          @map("job_order_item_id")
+  stepName       ProductionStep  @map("step_name")
+  workerId       String          @map("worker_id")
+  goodQty        Int             @default(0) @map("good_qty")
+  scrapQty       Int             @default(0) @map("scrap_qty")
+  reworkQty      Int             @default(0) @map("rework_qty")
+  reworkToStep   ProductionStep? @map("rework_to_step") // Step ที่จะส่ง rework กลับไป
+  weight         Decimal?        @db.Decimal(10, 2) // Weight in grams
   notes          String?
-  createdAt      DateTime       @default(now()) @map("created_at")
+  createdAt      DateTime        @default(now()) @map("created_at")
 
   jobOrderItem JobOrderItem @relation(fields: [jobOrderItemId], references: [id], onDelete: Cascade)
   worker       User         @relation(fields: [workerId], references: [id])

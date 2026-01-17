@@ -43,6 +43,7 @@ export function Modal({
         md: 'max-w-md',
         lg: 'max-w-lg',
         xl: 'max-w-xl',
+        '2xl': 'max-w-2xl',
     }
 
     return (
@@ -57,6 +58,7 @@ export function Modal({
             <div
                 className={cn(
                     'relative w-full bg-white dark:bg-gray-800 rounded-2xl shadow-2xl animate-scaleIn',
+                    'max-w-[calc(100vw-2rem)] sm:max-w-none',
                     sizes[size]
                 )}
             >
@@ -80,7 +82,7 @@ export function Modal({
                 )}
 
                 {/* Content */}
-                <div className="px-6 py-4 max-h-[70vh] overflow-y-auto">
+                <div className="px-4 sm:px-6 py-4 max-h-[60vh] sm:max-h-[70vh] overflow-y-auto">
                     {children}
                 </div>
             </div>

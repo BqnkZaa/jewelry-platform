@@ -177,13 +177,13 @@ export default function SKUMasterPage() {
                             icon={<Package className="w-12 h-12 text-gray-300" />}
                         />
                     ) : (
-                        <Table>
+                        <Table className="mobile-card-table">
                             <TableHeader>
                                 <TableRow>
                                     <TableHead>รหัส SKU</TableHead>
                                     <TableHead>ชื่อสินค้า</TableHead>
-                                    <TableHead>ชื่อไทย</TableHead>
-                                    <TableHead>ขั้นตอน</TableHead>
+                                    <TableHead className="hide-on-mobile">ชื่อไทย</TableHead>
+                                    <TableHead className="hide-on-mobile">ขั้นตอน</TableHead>
                                     <TableHead>สถานะ</TableHead>
                                     <TableHead className="w-24">จัดการ</TableHead>
                                 </TableRow>
@@ -191,25 +191,25 @@ export default function SKUMasterPage() {
                             <TableBody>
                                 {products.map((product) => (
                                     <TableRow key={product.id}>
-                                        <TableCell className="font-medium">{product.skuCode}</TableCell>
-                                        <TableCell>{product.name}</TableCell>
-                                        <TableCell>{product.nameTh || '-'}</TableCell>
-                                        <TableCell>
+                                        <TableCell data-label="SKU" className="font-medium">{product.skuCode}</TableCell>
+                                        <TableCell data-label="ชื่อ">{product.name}</TableCell>
+                                        <TableCell data-label="ชื่อไทย" className="hide-on-mobile">{product.nameTh || '-'}</TableCell>
+                                        <TableCell data-label="ขั้นตอน" className="hide-on-mobile">
                                             <span className="text-sm text-gray-500">
                                                 {product.steps.length} ขั้นตอน
                                             </span>
                                         </TableCell>
-                                        <TableCell>
+                                        <TableCell data-label="สถานะ">
                                             <span
                                                 className={`px-2 py-1 rounded-full text-xs font-medium ${product.isActive
-                                                        ? 'bg-emerald-100 text-emerald-800'
-                                                        : 'bg-gray-100 text-gray-800'
+                                                    ? 'bg-emerald-100 text-emerald-800'
+                                                    : 'bg-gray-100 text-gray-800'
                                                     }`}
                                             >
                                                 {product.isActive ? 'ใช้งาน' : 'ปิดใช้งาน'}
                                             </span>
                                         </TableCell>
-                                        <TableCell>
+                                        <TableCell data-label="จัดการ">
                                             <div className="flex items-center gap-1">
                                                 <button
                                                     onClick={() => openEditModal(product)}
@@ -296,13 +296,13 @@ export default function SKUMasterPage() {
                             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                                 ขั้นตอนการผลิต
                             </label>
-                            <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
+                            <div className="grid grid-cols-3 sm:grid-cols-5 gap-2">
                                 {PRODUCTION_STEPS.map((step) => (
                                     <label
                                         key={step.key}
                                         className={`flex items-center gap-2 p-2 rounded-lg border cursor-pointer transition-colors ${formData.steps.includes(step.key)
-                                                ? 'bg-indigo-50 border-indigo-500 dark:bg-indigo-900/20'
-                                                : 'border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800'
+                                            ? 'bg-indigo-50 border-indigo-500 dark:bg-indigo-900/20'
+                                            : 'border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800'
                                             }`}
                                     >
                                         <input

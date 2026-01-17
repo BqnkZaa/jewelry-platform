@@ -71,7 +71,7 @@ export default function HistoryPage() {
             <Card>
                 <CardHeader><CardTitle className="flex items-center gap-2"><Search className="w-5 h-5" />ค้นหา / กรอง</CardTitle></CardHeader>
                 <CardContent>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
                         <Select label="ขั้นตอน" options={[{ value: '', label: 'ทั้งหมด' }, ...PRODUCTION_STEPS.map((s) => ({ value: s.key, label: s.labelTh }))]} value={filters.stepName} onChange={(e) => setFilters({ ...filters, stepName: e.target.value as ProductionStep | '' })} />
                         <Select label="พนักงาน" options={[{ value: '', label: 'ทั้งหมด' }, ...users.map((u) => ({ value: u.id, label: u.fullName || 'ไม่ระบุ' }))]} value={filters.workerId} onChange={(e) => setFilters({ ...filters, workerId: e.target.value })} />
                         <Input label="ตั้งแต่วันที่" type="date" value={filters.startDate} onChange={(e) => setFilters({ ...filters, startDate: e.target.value })} />
@@ -87,30 +87,30 @@ export default function HistoryPage() {
                     ) : logs.length === 0 ? (
                         <TableEmpty message="ไม่พบประวัติ" icon={<History className="w-12 h-12 text-gray-300" />} />
                     ) : (
-                        <Table>
+                        <Table className="mobile-card-table">
                             <TableHeader>
                                 <TableRow>
                                     <TableHead>วันที่</TableHead>
                                     <TableHead>ใบสั่ง</TableHead>
-                                    <TableHead>SKU</TableHead>
+                                    <TableHead className="hide-on-mobile">SKU</TableHead>
                                     <TableHead>ขั้นตอน</TableHead>
                                     <TableHead>ดี</TableHead>
-                                    <TableHead>เสีย</TableHead>
-                                    <TableHead>แก้ไข</TableHead>
-                                    <TableHead>พนักงาน</TableHead>
+                                    <TableHead className="hide-on-mobile">เสีย</TableHead>
+                                    <TableHead className="hide-on-mobile">แก้ไข</TableHead>
+                                    <TableHead className="hide-on-mobile">พนักงาน</TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
                                 {logs.map((log) => (
                                     <TableRow key={log.id}>
-                                        <TableCell className="text-sm">{formatDateTime(log.createdAt)}</TableCell>
-                                        <TableCell className="font-medium">{log.jobOrderItem.jobOrder.jobNo}</TableCell>
-                                        <TableCell>{log.jobOrderItem.product.skuCode}</TableCell>
-                                        <TableCell><span className={`px-2 py-1 rounded-full text-xs text-white ${getStepColor(log.stepName)}`}>{getStepLabel(log.stepName)}</span></TableCell>
-                                        <TableCell className="text-emerald-600 font-medium">{log.goodQty}</TableCell>
-                                        <TableCell className="text-rose-600 font-medium">{log.scrapQty}</TableCell>
-                                        <TableCell className="text-amber-600 font-medium">{log.reworkQty}</TableCell>
-                                        <TableCell>{log.worker.fullName || '-'}</TableCell>
+                                        <TableCell data-label="วันที่" className="text-sm">{formatDateTime(log.createdAt)}</TableCell>
+                                        <TableCell data-label="ใบสั่ง" className="font-medium">{log.jobOrderItem.jobOrder.jobNo}</TableCell>
+                                        <TableCell data-label="SKU" className="hide-on-mobile">{log.jobOrderItem.product.skuCode}</TableCell>
+                                        <TableCell data-label="ขั้นตอน"><span className={`px-2 py-1 rounded-full text-xs text-white ${getStepColor(log.stepName)}`}>{getStepLabel(log.stepName)}</span></TableCell>
+                                        <TableCell data-label="ดี" className="text-emerald-600 font-medium">{log.goodQty}</TableCell>
+                                        <TableCell data-label="เสีย" className="text-rose-600 font-medium hide-on-mobile">{log.scrapQty}</TableCell>
+                                        <TableCell data-label="แก้ไข" className="text-amber-600 font-medium hide-on-mobile">{log.reworkQty}</TableCell>
+                                        <TableCell data-label="พนักงาน" className="hide-on-mobile">{log.worker.fullName || '-'}</TableCell>
                                     </TableRow>
                                 ))}
                             </TableBody>

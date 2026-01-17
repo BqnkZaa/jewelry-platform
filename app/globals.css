@@ -169,3 +169,243 @@ body {
 ::selection {
   background: rgba(245, 158, 11, 0.3);
 }
+
+/* ===== MOBILE & PWA ENHANCEMENTS ===== */
+
+/* Safe area support for notched devices (iPhone X+, etc.) */
+.safe-area-top {
+  padding-top: env(safe-area-inset-top);
+}
+
+.safe-area-bottom {
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+.safe-area-left {
+  padding-left: env(safe-area-inset-left);
+}
+
+.safe-area-right {
+  padding-right: env(safe-area-inset-right);
+}
+
+/* Smooth scrolling for touch devices */
+html {
+  scroll-behavior: smooth;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Touch-friendly improvements */
+@media (hover: none) and (pointer: coarse) {
+
+  /* Larger touch targets on mobile */
+  button,
+  a,
+  input,
+  select,
+  textarea {
+    min-height: 44px;
+  }
+
+  /* Remove hover effects on touch devices */
+  button:hover,
+  a:hover {
+    transform: none !important;
+  }
+}
+
+/* Prevent text selection on interactive elements */
+button,
+[role="button"] {
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+/* PWA Standalone mode adjustments */
+@media (display-mode: standalone) {
+  body {
+    padding-top: env(safe-area-inset-top);
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+}
+
+/* Improve table scrolling on mobile */
+.overflow-auto {
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Mobile-friendly input styles */
+@media (max-width: 640px) {
+
+  input[type="text"],
+  input[type="email"],
+  input[type="password"],
+  input[type="number"],
+  input[type="date"],
+  textarea,
+  select {
+    font-size: 16px;
+    /* Prevents iOS zoom on focus */
+  }
+}
+
+/* Hide scrollbar but keep functionality (optional) */
+.hide-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+/* Loading spinner for mobile */
+@keyframes mobileSpinner {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.mobile-spinner {
+  animation: mobileSpinner 0.8s linear infinite;
+}
+
+/* ===== MOBILE CARD TABLE ===== */
+/* Use this class on tables to convert them to cards on mobile */
+
+@media (max-width: 768px) {
+
+  /* Mobile Card Table - converts table rows to cards */
+  .mobile-card-table {
+    border: none !important;
+  }
+
+  .mobile-card-table thead {
+    display: none;
+  }
+
+  .mobile-card-table tbody {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    padding: 0.75rem;
+  }
+
+  .mobile-card-table tr {
+    display: flex;
+    flex-direction: column;
+    background: white;
+    border-radius: 1rem;
+    padding: 1rem;
+    border: 1px solid #e5e7eb;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  }
+
+  .dark .mobile-card-table tr {
+    background: #1f2937;
+    border-color: #374151;
+  }
+
+  .mobile-card-table td {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.5rem 0;
+    border-bottom: 1px solid #f3f4f6;
+  }
+
+  .dark .mobile-card-table td {
+    border-bottom-color: #374151;
+  }
+
+  .mobile-card-table td:last-child {
+    border-bottom: none;
+  }
+
+  /* Data label attribute for mobile */
+  .mobile-card-table td::before {
+    content: attr(data-label);
+    font-weight: 600;
+    color: #6b7280;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+  }
+
+  .dark .mobile-card-table td::before {
+    color: #9ca3af;
+  }
+
+  /* Hide desktop-only columns on mobile */
+  .hide-on-mobile {
+    display: none !important;
+  }
+}
+
+/* Show on mobile only */
+@media (min-width: 769px) {
+  .show-on-mobile-only {
+    display: none !important;
+  }
+}
+
+/* ===== RESPONSIVE SPACING ===== */
+@media (max-width: 640px) {
+
+  /* Reduce card padding on mobile */
+  .mobile-compact-card {
+    padding: 0.75rem !important;
+  }
+
+  /* Smaller text on mobile */
+  .mobile-text-sm {
+    font-size: 0.875rem !important;
+  }
+
+  .mobile-text-xs {
+    font-size: 0.75rem !important;
+  }
+
+  /* Full width buttons on mobile */
+  .mobile-full-width {
+    width: 100% !important;
+  }
+
+  /* Stack flex items vertically on mobile */
+  .mobile-stack {
+    flex-direction: column !important;
+    align-items: stretch !important;
+  }
+
+  .mobile-stack>* {
+    width: 100% !important;
+  }
+
+  /* Center text on mobile */
+  .mobile-text-center {
+    text-align: center !important;
+  }
+}
+
+/* ===== RESPONSIVE GRID HELPERS ===== */
+@media (max-width: 640px) {
+  .mobile-grid-1 {
+    grid-template-columns: 1fr !important;
+  }
+
+  .mobile-grid-2 {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+}
+
+/* ===== TOUCH IMPROVEMENTS ===== */
+@media (max-width: 768px) {
+
+  /* Larger tap targets for action buttons */
+  .mobile-tap-target {
+    min-width: 44px;
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+}

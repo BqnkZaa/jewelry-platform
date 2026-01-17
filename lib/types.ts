@@ -183,6 +183,7 @@ export interface ProductionFormData {
     goodQty: number
     scrapQty: number
     reworkQty: number
+    reworkToStep?: ProductionStep // Step ที่จะส่ง rework กลับไป
     weight?: number
     notes?: string
 }
