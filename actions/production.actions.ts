@@ -416,7 +416,8 @@ export async function getDashboardStats() {
             stepCounts,
             totalItemsInProduction,
             finishedItemsToday,
-            dailyProduction
+            dailyProduction,
+            packingLogsForActive
         ] = await Promise.all([
             prisma.jobOrder.count({
                 where: { status: { in: ['PENDING', 'IN_PROGRESS'] } },
@@ -466,20 +467,19 @@ export async function getDashboardStats() {
                     goodQty: true,
                 },
             }),
-        ])
-
-        // Calculate finished items from PACKING logs for active orders
-        const packingLogsForActive = await prisma.productionLog.aggregate({
-            where: {
-                stepName: 'PACKING',
-                jobOrderItem: {
-                    jobOrder: {
-                        status: { in: ['PENDING', 'IN_PROGRESS'] },
+            // Calculate finished items from PACKING logs for active orders
+            prisma.productionLog.aggregate({
+                where: {
+                    stepName: 'PACKING',
+                    jobOrderItem: {
+                        jobOrder: {
+                            status: { in: ['PENDING', 'IN_PROGRESS'] },
+                        },
                     },
                 },
-            },
-            _sum: { goodQty: true },
-        })
+                _sum: { goodQty: true },
+            })
+        ])
 
         const totalGood = goodOutput._sum.goodQty || 0
         const totalScrap = scrapOutput._sum.scrapQty || 0
